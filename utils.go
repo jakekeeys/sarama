@@ -137,6 +137,15 @@ func (v KafkaVersion) IsAtLeast(other KafkaVersion) bool {
 	return true
 }
 
+func IsSupported(version KafkaVersion) bool {
+	for _, supportedVersion := range SupportedVersions {
+		if version == supportedVersion {
+			return true
+		}
+	}
+	return false
+}
+
 // Effective constants defining the supported kafka versions.
 var (
 	V0_8_2_0  = newKafkaVersion(0, 8, 2, 0)
@@ -179,34 +188,26 @@ var (
 )
 
 func ParseKafkaVersion(s string) (KafkaVersion, error) {
-	if len(s) < 5 {
+	var major, minor, veryMinor, patch uint
+	var version KafkaVersion
+
+	if regexp.MustCompile(`^\d+\.\d+\.\d+\.\d+$`).MatchString(s) {
+		fmt.Sscanf(s, "%d.%d.%d.%d", &major, &minor, &veryMinor, &patch)
+		version = newKafkaVersion(major, minor, veryMinor, patch)
+	}
+
+	if regexp.MustCompile(`^\d+\.\d+\.\d+$`).MatchString(s) {
+		fmt.Sscanf(s, "%d.%d.%d", &major, &minor, &veryMinor)
+		version = newKafkaVersion(major, minor, veryMinor, 0)
+	}
+
+	if !IsSupported(version) {
 		return MinVersion, fmt.Errorf("invalid version `%s`", s)
 	}
-	var major, minor, veryMinor, patch uint
-	var err error
-	if s[0] == '0' {
-		err = scanKafkaVersion(s, `^0\.\d+\.\d+\.\d+$`, "0.%d.%d.%d", [3]*uint{&minor, &veryMinor, &patch})
-	} else {
-		err = scanKafkaVersion(s, `^\d+\.\d+\.\d+$`, "%d.%d.%d", [3]*uint{&major, &minor, &veryMinor})
-	}
-	if err != nil {
-		return MinVersion, err
-	}
-	return newKafkaVersion(major, minor, veryMinor, patch), nil
-}
 
-func scanKafkaVersion(s string, pattern string, format string, v [3]*uint) error {
-	if !regexp.MustCompile(pattern).MatchString(s) {
-		return fmt.Errorf("invalid version `%s`", s)
-	}
-	_, err := fmt.Sscanf(s, format, v[0], v[1], v[2])
-	return err
+	return version, nil
 }
 
 func (v KafkaVersion) String() string {
-	if v.version[0] == 0 {
-		return fmt.Sprintf("0.%d.%d.%d", v.version[1], v.version[2], v.version[3])
-	} else {
-		return fmt.Sprintf("%d.%d.%d", v.version[0], v.version[1], v.version[2])
-	}
+	return fmt.Sprintf("%d.%d.%d.%d", v.version[0], v.version[1], v.version[2], v.version[3])
 }

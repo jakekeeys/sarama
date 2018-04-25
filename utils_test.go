@@ -1,6 +1,9 @@
 package sarama
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestVersionCompare(t *testing.T) {
 	if V0_8_2_0.IsAtLeast(V0_8_2_1) {
@@ -21,13 +24,13 @@ func TestVersionCompare(t *testing.T) {
 }
 
 func TestVersionParsing(t *testing.T) {
-	validVersions := []string{"0.8.2.0", "0.8.2.1", "0.9.0.0", "0.10.2.0", "1.0.0"}
+	validVersions := []string{"0.8.2.0", "0.8.2.1", "0.9.0.0", "0.10.2.0", "1.0.0", "1.1.0.0"}
 	for _, s := range validVersions {
 		v, err := ParseKafkaVersion(s)
 		if err != nil {
 			t.Errorf("could not parse valid version %s: %s", s, err)
 		}
-		if v.String() != s {
+		if v.String() != s && v.String() != fmt.Sprintf("%s.0", s) {
 			t.Errorf("version %s != %s", v.String(), s)
 		}
 	}
